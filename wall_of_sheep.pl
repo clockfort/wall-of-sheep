@@ -35,9 +35,11 @@ while(my $line = <>){
 		my $scrubbed_pass = "";
 		if(length($pass) > 1){
 			$scrubbed_pass=substr($pass,0,($idiots{$ip} / REVEAL_DIVISOR) + 1).PASS_SUFFIX;
+			$scrubbed_pass = $pass if ($scrubbed_pass =~ /$pass/);
 		}
 		else{
-			$scrubbed_pass=PASS_SUFFIX;
+# What the hell, this user is an idiot. Let him suffer.
+			$scrubbed_pass = $pass;
 		}
 		
 		pick_color($protocol);	
