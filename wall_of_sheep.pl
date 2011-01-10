@@ -8,8 +8,17 @@ use Term::ANSIColor;
 use constant REVEAL_DIVISOR => 30;
 use constant PASS_LENGTH => 20;
 use constant PASS_SUFFIX => '*' x PASS_LENGTH;
+use constant WHITELIST_FILE => '.whitelist';
 
-my %idiots;
+my (%idiots, @whitelist);
+
+# Newline delimited list of hostnames
+if ( -f WHITELIST_FILE) {
+	open (my $fh, WHITELIST_FILE);
+	@whitelist = <$fh>;
+	map { chomp } @whitelist;
+	close $fh;
+}
 
 #Attempt to prevent screen blanking
 printf ("\033[9;%ld]", 0);
@@ -30,14 +39,20 @@ while(my $line = <>){
 		my $pass = $8;
 		my $ip_addr = pack("C4", $2,$3,$4,$5);
 		my ($hostname) = (gethostbyaddr($ip_addr, 2))[0];
+
+		next if ($hostname ~~ @whitelist);
+		next if ($ip ~~ @whitelist);
+
 		$idiots{$ip}++;
 		
 		my $scrubbed_pass = "";
 		if(length($pass) > 1){
 			$scrubbed_pass=substr($pass,0,($idiots{$ip} / REVEAL_DIVISOR) + 1).PASS_SUFFIX;
+			$scrubbed_pass = $pass if ($scrubbed_pass =~ /$pass/);
 		}
 		else{
-			$scrubbed_pass=PASS_SUFFIX;
+# What the hell, this user is an idiot. Let him suffer.
+			$scrubbed_pass = $pass;
 		}
 		
 		pick_color($protocol);	
