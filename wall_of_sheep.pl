@@ -10,13 +10,16 @@ use constant PASS_LENGTH => 20;
 use constant PASS_SUFFIX => '*' x PASS_LENGTH;
 use constant WHITELIST_FILE => '.whitelist';
 
-my (%idiots, @whitelist);
+my (%idiots, %whitelist);
 
 # Newline delimited list of hostnames
 if ( -f WHITELIST_FILE) {
 	open (my $fh, WHITELIST_FILE);
-	@whitelist = <$fh>;
-	map { chomp } @whitelist;
+	my @liney_parts;
+	foreach my $line (<$fh>) {
+		@liney_parts = split /\s+/,$line;
+		$whitelist{$liney_parts[0]} =  [ @liney_parts[1 .. $#liney_parts] ];
+	}
 	close $fh;
 }
 
@@ -40,8 +43,8 @@ while(my $line = <>){
 		my $ip_addr = pack("C4", $2,$3,$4,$5);
 		my ($hostname) = (gethostbyaddr($ip_addr, 2))[0];
 
-		next if ($hostname ~~ @whitelist);
-		next if ($ip ~~ @whitelist);
+		next if ($protocol ~~ @{$whitelist{$hostname}});
+		next if ($protocol ~~ @{$whitelist{$ip}});
 
 		$idiots{$ip}++;
 		
@@ -66,8 +69,7 @@ while(my $line = <>){
 		}
 		$user = sprintf '%.*s', 16, $user;
 		$pass = sprintf '%.*s', PASS_LENGTH, $scrubbed_pass;
-		print pack("A10 A16 A29 A17 A".PASS_LENGTH, $protocol, $ip, $hostname, $user, $pass);
-		print "\n";
+		say pack("A10 A16 A29 A17 A".PASS_LENGTH, $protocol, $ip, $hostname, $user, $pass);
 		print color("reset");
 	}
 }
