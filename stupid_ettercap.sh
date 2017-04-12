@@ -1,5 +1,5 @@
 #!/bin/bash
 
 while true; do
-	ettercap -i eth0 -Tzqu | ./wall_of_sheep.pl
+	ettercap -i $1 -Tzqu | ./wall_of_sheep.pl $1
 done
