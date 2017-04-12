@@ -1,4 +1,6 @@
 #!/usr/bin/perl
+
+use DBI;
 use strict;
 use warnings;
 use 5.010;
@@ -11,6 +13,35 @@ use constant PASS_SUFFIX => '*' x PASS_LENGTH;
 use constant WHITELIST_FILE => '.whitelist';
 
 my (%idiots, @whitelist);
+
+my $iface = $ARGV[0];
+shift;
+
+my $config = do("config.pl");
+my $dsn = "DBI:$config->{driver}:dbname=$config->{dbname};host=$config->{host};$config->{option}";
+
+my $dbh = DBI->connect($dsn, $config->{userid}, $config->{passwd}, { RaiseError => 1 })
+                      or die $DBI::errstr;
+
+my $db_create_table = qq(
+CREATE TABLE IF NOT EXISTS entries (
+ID			SERIAL PRIMARY KEY	NOT NULL,
+IPADDR		TEXT				NOT NULL,
+IFACE		TEXT				NOT NULL,
+HOSTNAME	TEXT				NOT NULL,
+PROTOCOL	TEXT				NOT NULL,
+USERNAME	TEXT				NOT NULL,
+PASSWORD	TEXT				NOT NULL
+););
+
+my $db_add_entry = $dbh->prepare(qq(
+INSERT INTO entries
+(IPADDR, IFACE, HOSTNAME, PROTOCOL, USERNAME, PASSWORD)
+VALUES
+(?, ?, ?, ?, ?, ?);
+));
+
+my $rv = $dbh->do($db_create_table) or die $DBI::errstr;
 
 # Newline delimited list of hostnames
 if ( -f WHITELIST_FILE) {
@@ -69,6 +100,9 @@ while(my $line = <>){
 		print pack("A10 A16 A29 A17 A".PASS_LENGTH, $protocol, $ip, $hostname, $user, $pass);
 		print "\n";
 		print color("reset");
+
+		# also update the db
+		$rv = $db_add_entry->execute($ip, $iface, $hostname, $protocol, $user, $pass) or die $DBI::errstr;
 	}
 }
 

@@ -1,0 +1,9 @@
+{
+    dbname => "",
+    driver => "",
+    host   => "",
+    userid => "",
+    passwd => "",
+    # Wouldn't this be ironic?
+    option => "sslmode=require"
+}
